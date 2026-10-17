@@ -2,22 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 
-final supabase = Supabase.instance.client;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Supabase ক্লাউড কানেকশন শুরু
-  await Supabase.initialize(
-    url: AppConstants.supabaseUrl,
-    anonKey: AppConstants.supabaseAnonKey,
-  );
+  String? initError;
+  try {
+    await Supabase.initialize(
+      url: AppConstants.supabaseUrl,
+      anonKey: AppConstants.supabaseAnonKey,
+    );
+  } catch (e) {
+    initError = e.toString();
+  }
 
-  runApp(const PrinceChatApp());
+  runApp(PrinceChatApp(errorMessage: initError));
 }
 
 class PrinceChatApp extends StatelessWidget {
-  const PrinceChatApp({super.key});
+  final String? errorMessage;
+  const PrinceChatApp({super.key, this.errorMessage});
 
   @override
   Widget build(BuildContext context) {
@@ -39,14 +42,42 @@ class PrinceChatApp extends StatelessWidget {
           titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
-      home: const SplashScreen(),
+      home: errorMessage != null
+          ? ErrorDisplayScreen(error: errorMessage!)
+          : const SplashScreen(),
     );
   }
 }
 
-// ==========================================
-// ১. স্প্ল্যাশ স্ক্রিন (সেশন চেক)
-// ==========================================
+// কোনো ত্রুটি হলে সাদা স্ক্রিনের বদলে সরাসরি স্ক্রিনে দেখাবে
+class ErrorDisplayScreen extends StatelessWidget {
+  final String error;
+  const ErrorDisplayScreen({super.key, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Connection Error")),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 70, color: AppColors.error),
+              const SizedBox(height: 20),
+              const Text("কানেকশন সমস্যা", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Text(error, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ১. স্প্ল্যাশ স্ক্রিন
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -62,21 +93,26 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _checkAuth() async {
-    await Future.delayed(const Duration(seconds: 2));
-    final session = supabase.auth.currentSession;
+    await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
 
-    if (session == null) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-    } else {
-      // প্রোফাইল চেক
-      final profile = await supabase.from('profiles').select().eq('id', session.user.id).maybeSingle();
-      if (!mounted) return;
-
-      if (profile == null) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileSetupScreen()));
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       } else {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+        final profile = await Supabase.instance.client.from('profiles').select().eq('id', session.user.id).maybeSingle();
+        if (!mounted) return;
+
+        if (profile == null) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileSetupScreen()));
+        } else {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       }
     }
   }
@@ -113,9 +149,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-// ==========================================
 // ২. ফোন নম্বর লগইন স্ক্রিন
-// ==========================================
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -134,7 +168,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // বাংলাদেশ ফরম্যাটিং (+880)
     if (!phone.startsWith('+')) {
       if (phone.startsWith('0')) {
         phone = '+88$phone';
@@ -146,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await supabase.auth.signInWithOtp(phone: phone);
+      await Supabase.instance.client.auth.signInWithOtp(phone: phone);
       if (!mounted) return;
 
       Navigator.push(
@@ -170,7 +203,6 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
             const Text(
@@ -216,9 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ==========================================
 // ৩. OTP ভেরিফিকেশন স্ক্রিন
-// ==========================================
 class OtpScreen extends StatefulWidget {
   final String phoneNumber;
   const OtpScreen({super.key, required this.phoneNumber});
@@ -241,7 +271,7 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final res = await supabase.auth.verifyOTP(
+      final res = await Supabase.instance.client.auth.verifyOTP(
         type: OtpType.sms,
         token: otp,
         phone: widget.phoneNumber,
@@ -250,7 +280,7 @@ class _OtpScreenState extends State<OtpScreen> {
       if (!mounted) return;
 
       if (res.user != null) {
-        final profile = await supabase.from('profiles').select().eq('id', res.user!.id).maybeSingle();
+        final profile = await Supabase.instance.client.from('profiles').select().eq('id', res.user!.id).maybeSingle();
         if (!mounted) return;
 
         if (profile == null) {
@@ -262,7 +292,7 @@ class _OtpScreenState extends State<OtpScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("OTP ভুল বা মেয়াদোত্তীর্ণ: ${e.toString()}"), backgroundColor: AppColors.error),
+        SnackBar(content: Text("ত্রুটি: ${e.toString()}"), backgroundColor: AppColors.error),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -320,9 +350,7 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 }
 
-// ==========================================
 // ৪. প্রোফাইল সেটআপ স্ক্রিন
-// ==========================================
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
 
@@ -343,11 +371,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
 
     setState(() => _isLoading = true);
-    final user = supabase.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
 
     try {
       if (user != null) {
-        await supabase.from('profiles').upsert({
+        await Supabase.instance.client.from('profiles').upsert({
           'id': user.id,
           'display_name': name,
           'phone_number': user.phone ?? '',
@@ -421,9 +449,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 }
 
-// ==========================================
-// ৫. চ্যাট হোম স্ক্রিন
-// ==========================================
+// ৫. হোম স্ক্রিন
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -441,15 +467,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadProfile() async {
-    final user = supabase.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      final data = await supabase.from('profiles').select().eq('id', user.id).maybeSingle();
+      final data = await Supabase.instance.client.from('profiles').select().eq('id', user.id).maybeSingle();
       if (mounted) setState(() => _profile = data);
     }
   }
 
   void _logout() async {
-    await supabase.auth.signOut();
+    await Supabase.instance.client.auth.signOut();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
   }

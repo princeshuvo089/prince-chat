@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 
+const String appOfficialLogo = 'https://prince-cloud.onrender.com/files/a1394e6df10b.png';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -49,7 +51,6 @@ class PrinceChatApp extends StatelessWidget {
   }
 }
 
-// কোনো ত্রুটি হলে সাদা স্ক্রিনের বদলে সরাসরি স্ক্রিনে দেখাবে
 class ErrorDisplayScreen extends StatelessWidget {
   final String error;
   const ErrorDisplayScreen({super.key, required this.error});
@@ -77,7 +78,7 @@ class ErrorDisplayScreen extends StatelessWidget {
   }
 }
 
-// ১. স্প্ল্যাশ স্ক্রিন
+// ১. স্প্ল্যাশ স্ক্রিন (অফিসিয়াল লোগো সহ)
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -93,7 +94,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _checkAuth() async {
-    await Future.delayed(const Duration(milliseconds: 1500));
+    await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
     try {
@@ -125,13 +126,18 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.primaryGreen.withOpacity(0.1),
-                shape: BoxShape.circle,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Image.network(
+                appOfficialLogo,
+                width: 90,
+                height: 90,
+                errorBuilder: (_, __, ___) => Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: AppColors.primaryGreen.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.chat_bubble_rounded, size: 60, color: AppColors.primaryGreen),
+                ),
               ),
-              child: const Icon(Icons.chat_bubble_rounded, size: 70, color: AppColors.primaryGreen),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -200,10 +206,20 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Verify Phone Number")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
+            const SizedBox(height: 20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                appOfficialLogo,
+                width: 70,
+                height: 70,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
             const SizedBox(height: 20),
             const Text(
               "PRINCE CHAT আপনার নম্বর ভেরিফাই করতে একটি SMS ওটিপি পাঠাবে।",
@@ -547,7 +563,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 30),
               const Text("Cloud Connected & Verified! 🟢", style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
-              const Text("পরের ধাপে রিয়েল-টাইম চ্যাট ও মিডিয়া যোগ করা হবে।", textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+              const Text("লগইন সফল হয়েছে। পরের ধাপে রিয়েল-টাইম চ্যাটিং শুরু করব।", textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
             ],
           ),
         ),

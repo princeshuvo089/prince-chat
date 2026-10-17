@@ -25,11 +25,13 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Scaffold Android Files If Missing
+      - name: Scaffold Android Files & Add Internet Permission
         run: |
           if [ ! -d "android" ]; then
             flutter create --org com.princechat --project-name prince_chat .
           fi
+          # Add Internet permission to AndroidManifest.xml
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
 
       - name: Install Dependencies
         run: flutter pub get

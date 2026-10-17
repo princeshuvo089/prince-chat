@@ -13,10 +13,12 @@ dependencies:
   # Backend & Supabase
   supabase_flutter: ^2.8.0
 
-  # State Management
-  flutter_riverpod: ^2.5.1
+  # Storage & Plugins (Fixed Versions)
+  shared_preferences: ^2.3.2
+  shared_preferences_android: ^2.4.0
 
-  # Media & Tools
+  # State & Tools
+  flutter_riverpod: ^2.5.1
   cached_network_image: ^3.3.1
   image_picker: ^1.1.2
   path_provider: ^2.1.3

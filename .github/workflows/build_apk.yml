@@ -25,20 +25,21 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Scaffold, Add Permissions & Set Official Logo
+      - name: Scaffold Android Files
         run: |
-          if [ ! -d "android" ]; then
-            flutter create --org com.princechat --project-name prince_chat .
-          fi
-          # Add Internet permissions
-          sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <application/' android/app/src/main/AndroidManifest.xml
-          
-          # Download and set official logo as Android App Icon
-          LOGO_URL="https://prince-cloud.onrender.com/files/a1394e6df10b.png"
-          for dir in hdpi mdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p "android/app/src/main/res/mipmap-$dir"
-            curl -sL "$LOGO_URL" -o "android/app/src/main/res/mipmap-$dir/ic_launcher.png"
-          done
+          flutter create --org com.princechat --project-name prince_chat .
+
+      - name: Add Internet Permission Safely
+        run: |
+          python3 -c "
+          p = 'android/app/src/main/AndroidManifest.xml'
+          with open(p, 'r') as f:
+              s = f.read()
+          if 'android.permission.INTERNET' not in s:
+              s = s.replace('<application', '<uses-permission android:name=\"android.permission.INTERNET\"/>\n    <application')
+              with open(p, 'w') as f:
+                  f.write(s)
+          "
 
       - name: Install Dependencies
         run: flutter pub get
